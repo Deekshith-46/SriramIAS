@@ -48,3 +48,20 @@ Thumbs.db
 
 # Database
 *.mongo
+
+# Uploads (local)
+uploads/
+
+# Qoder
+.qoder/
+
+# Documentation (optional)
+# *.md
+# !README.md
+
+# Test files
+test-*.js
+scripts/
+
+# Postman
+postman_collection.json
