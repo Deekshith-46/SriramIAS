@@ -11,6 +11,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
 const courseRoutes = require('./routes/courseRoutes');
+const publicRoutes = require('./routes/publicRoutes');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api', publicRoutes); // Public routes for centers and categories
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -26,7 +26,10 @@ const courseSchema = new mongoose.Schema({
   
   description: String,
   
-  startDate: Date,
+  startDate: {
+    type: mongoose.Schema.Types.Mixed, // Can be Date or String (e.g., "Admission open soon")
+    default: null
+  },
   duration: String, // "1 Year", "2 Years", "6 Months"
   
   fees: {
@@ -81,6 +84,12 @@ const courseSchema = new mongoose.Schema({
   howItHelps: {
     howItHelpsTitle: String,
     howItHelpsTexts: [String]
+  },
+  
+  // Extra Fields (Flexible content for category-specific data)
+  extraFields: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   
   // Additional Info

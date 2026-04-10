@@ -43,14 +43,19 @@ exports.createCourse = async (req, res) => {
       });
     }
 
-    // Parse startDate if provided (handle various date formats)
+    // Parse startDate if provided (handle both dates and text like "Admission open soon")
     let parsedStartDate = null;
     if (startDate) {
-      parsedStartDate = new Date(startDate);
-      if (isNaN(parsedStartDate.getTime())) {
-        return res.status(400).json({ 
-          message: 'Invalid date format for startDate. Use YYYY-MM-DD format (e.g., 2026-03-27)' 
-        });
+      // Try to parse as date first
+      const dateObj = new Date(startDate);
+      
+      // If it's a valid date, store it
+      if (!isNaN(dateObj.getTime())) {
+        parsedStartDate = dateObj;
+      } else {
+        // If it's not a valid date, treat it as text (e.g., "Admission open soon")
+        // Store as string in a separate field
+        parsedStartDate = startDate; // Will be stored as string
       }
     }
 
@@ -164,15 +169,23 @@ exports.createCourse = async (req, res) => {
     }
 
     // Parse content sections with safe parsing
+    console.log('🔍 RAW req.body.keyHighlights:', req.body.keyHighlights);
+    console.log('🔍 Type:', typeof req.body.keyHighlights);
+    
     let parsedKeyHighlights = {};
     if (req.body.keyHighlights) {
       try {
         parsedKeyHighlights = typeof req.body.keyHighlights === 'string' 
           ? JSON.parse(req.body.keyHighlights) 
           : req.body.keyHighlights;
+        console.log('✅ Parsed keyHighlights:', parsedKeyHighlights);
       } catch (err) {
         console.error('❌ keyHighlights parse error:', err);
+        console.error('❌ Raw value that failed:', req.body.keyHighlights);
       }
+    } else {
+      console.warn('⚠️  keyHighlights not found in req.body');
+      console.log('📋 Available fields in req.body:', Object.keys(req.body));
     }
 
     let parsedWhyChoose = {};
@@ -199,6 +212,18 @@ exports.createCourse = async (req, res) => {
       }
     }
 
+    // Parse extra fields (category-specific data)
+    let parsedExtraFields = {};
+    if (req.body.extraFields) {
+      try {
+        parsedExtraFields = typeof req.body.extraFields === 'string'
+          ? JSON.parse(req.body.extraFields)
+          : req.body.extraFields;
+      } catch (err) {
+        console.error('❌ extraFields parse error:', err);
+      }
+    }
+
     // Create course
     const course = await Course.create({
       title,
@@ -221,6 +246,7 @@ exports.createCourse = async (req, res) => {
       keyHighlights: parsedKeyHighlights,
       whyChoose: parsedWhyChoose,
       howItHelps: parsedHowItHelps,
+      extraFields: parsedExtraFields,
       createdBy: user._id
     });
 
@@ -249,7 +275,23 @@ exports.createCourse = async (req, res) => {
 // @access  Public
 exports.getCourses = async (req, res) => {
   try {
-    const { center, category, isActive, isFeatured, centerName, categoryName, page = 1, limit = 10 } = req.query;
+    const { center, category, isActive, isFeatured, centerName, categoryName, page = 1, limit } = req.query;
+
+    // ==============================
+    // ✅ DEFAULT FILTERS
+    // ==============================
+    let defaultCenterName = centerName;
+    let defaultCategoryName = categoryName;
+
+    // If no center specified, default to "New Delhi"
+    if (!defaultCenterName) {
+      defaultCenterName = 'New Delhi';
+    }
+
+    // If no category specified, default to "GS Foundation"
+    if (!defaultCategoryName) {
+      defaultCategoryName = 'GS Foundation';
+    }
 
     // Build filter
     const filter = {};
@@ -260,58 +302,65 @@ exports.getCourses = async (req, res) => {
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (isFeatured) filter.isFeatured = true;
 
-    // Name-based filters (will query after getting IDs)
-    let centerQuery = {};
-    let categoryQuery = {};
-
-    if (centerName) {
-      const centers = await Center.find({ name: new RegExp(centerName, 'i') });
+    // Name-based filters with defaults
+    if (defaultCenterName) {
+      const centers = await Center.find({ name: new RegExp(defaultCenterName, 'i') });
       if (centers.length > 0) {
         filter.center = { $in: centers.map(c => c._id) };
       } else {
-        // No matching centers
+        // No matching centers - return empty
         return res.json({
           success: true,
           count: 0,
           courses: [],
-          message: `No courses found for center: ${centerName}`
+          message: `No courses found for center: ${defaultCenterName}`
         });
       }
     }
 
-    if (categoryName) {
-      const categories = await Category.find({ name: new RegExp(categoryName, 'i') });
+    if (defaultCategoryName && defaultCategoryName !== 'All') {
+      const categories = await Category.find({ name: new RegExp(defaultCategoryName, 'i') });
       if (categories.length > 0) {
         filter.category = { $in: categories.map(c => c._id) };
       } else {
-        // No matching categories
+        // No matching categories - return empty
         return res.json({
           success: true,
           count: 0,
           courses: [],
-          message: `No courses found for category: ${categoryName}`
+          message: `No courses found for category: ${defaultCategoryName}`
         });
       }
     }
+    // If categoryName is "All", skip category filter
 
-    // Pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const courses = await Course.find(filter)
-      .populate('center', 'name')
-      .populate('category', 'name')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
+    // Get total count first
     const total = await Course.countDocuments(filter);
+    
+    // If limit is 'all' or not provided, return all courses
+    let courses;
+    if (limit === 'all' || limit === undefined) {
+      courses = await Course.find(filter)
+        .populate('center', 'name')
+        .populate('category', 'name')
+        .sort({ createdAt: -1 });
+    } else {
+      // Pagination
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      courses = await Course.find(filter)
+        .populate('center', 'name')
+        .populate('category', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
 
     res.json({
       success: true,
       count: courses.length,
       total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
+      page: limit === 'all' || limit === undefined ? 1 : parseInt(page),
+      pages: limit === 'all' || limit === undefined ? 1 : Math.ceil(total / parseInt(limit)),
       courses
     });
 
@@ -377,7 +426,7 @@ exports.getCourseBySlug = async (req, res) => {
 };
 
 // @desc    Update course
-// @route   PUT /api/admin/course/:id
+// @route   PUT /api/courses/:id
 // @access  Private (Super Admin, Center Admin)
 exports.updateCourse = async (req, res) => {
   try {
@@ -399,160 +448,175 @@ exports.updateCourse = async (req, res) => {
       }
     }
 
-    // Update fields
-    const updates = req.body;
-    
-    // Handle file uploads (if any new files) and delete old ones
-    if (req.files) {
-      const files = req.files;
-      
-      // First, delete all old files in parallel
-      const deletePromises = [];
-      
-      if (files.banner) {
-        deletePromises.push(deleteFromCloudinary(course.bannerImage?.public_id));
-      }
-      if (files.highlight) {
-        deletePromises.push(deleteFromCloudinary(course.highlightImage?.public_id));
-      }
-      if (files.section) {
-        deletePromises.push(deleteFromCloudinary(course.sectionImage?.public_id));
-      }
-      if (files.gallery && course.galleryImages && course.galleryImages.length > 0) {
-        course.galleryImages.forEach(img => {
-          deletePromises.push(deleteFromCloudinary(img.public_id));
-        });
-      }
-      if (files.video) {
-        deletePromises.push(deleteFromCloudinary(course.promoVideo?.public_id));
-      }
-      if (files.brochure) {
-        deletePromises.push(deleteFromCloudinary(course.brochure?.public_id));
-      }
-      
-      // Delete old files in parallel
-      await Promise.all(deletePromises);
-      
-      // Now upload new files in parallel
-      const uploadPromises = [];
-      
-      if (files.banner) {
-        uploadPromises.push(
-          uploadToCloudinary(files.banner[0], 'courses/banners')
-            .then(result => ({ type: 'banner', result }))
-        );
-      }
-      
-      if (files.highlight) {
-        uploadPromises.push(
-          uploadToCloudinary(files.highlight[0], 'courses/highlights')
-            .then(result => ({ type: 'highlight', result }))
-        );
-      }
-      
-      if (files.section) {
-        uploadPromises.push(
-          uploadToCloudinary(files.section[0], 'courses/sections')
-            .then(result => ({ type: 'section', result }))
-        );
-      }
-      
-      if (files.gallery) {
-        files.gallery.forEach((file, index) => {
-          uploadPromises.push(
-            uploadToCloudinary(file, 'courses/gallery')
-              .then(result => ({ type: 'gallery', index, result }))
-          );
-        });
-      }
-      
-      if (files.video) {
-        uploadPromises.push(
-          uploadToCloudinary(files.video[0], 'courses/videos')
-            .then(result => ({ type: 'video', result }))
-        );
-      }
-      
-      if (files.brochure) {
-        uploadPromises.push(
-          uploadToCloudinary(files.brochure[0], 'courses/brochures', 'raw', 'pdf')
-            .then(result => ({ type: 'brochure', result }))
-        );
-      }
-      
-      // Wait for all uploads to complete in parallel
-      const uploadResults = await Promise.all(uploadPromises);
-      
-      // Process upload results
-      let newGalleryImages = [];
-      
-      for (const upload of uploadResults) {
-        switch (upload.type) {
-          case 'banner':
-            updates.bannerImage = { url: upload.result.url, public_id: upload.result.public_id };
-            break;
-          case 'highlight':
-            updates.highlightImage = { url: upload.result.url, public_id: upload.result.public_id };
-            break;
-          case 'section':
-            updates.sectionImage = { url: upload.result.url, public_id: upload.result.public_id };
-            break;
-          case 'gallery':
-            newGalleryImages.push({ url: upload.result.url, public_id: upload.result.public_id });
-            break;
-          case 'video':
-            updates.promoVideo = { url: upload.result.url, public_id: upload.result.public_id };
-            break;
-          case 'brochure':
-            updates.brochure = { url: upload.result.url, public_id: upload.result.public_id };
-            break;
-        }
-      }
-      
-      // Set gallery images if any were uploaded
-      if (newGalleryImages.length > 0) {
-        updates.galleryImages = newGalleryImages;
+    // ==============================
+    // ✅ BUILD DYNAMIC UPDATE OBJECT
+    // ==============================
+    const updates = {};
+
+    // 🟢 Basic fields
+    if (req.body.title) updates.title = req.body.title;
+    if (req.body.description) updates.description = req.body.description;
+    if (req.body.duration) updates.duration = req.body.duration;
+    if (req.body.startDate) {
+      // Handle both dates and text like "Admission open soon"
+      const dateObj = new Date(req.body.startDate);
+      if (!isNaN(dateObj.getTime())) {
+        updates.startDate = dateObj;
+      } else {
+        updates.startDate = req.body.startDate; // Store as text
       }
     }
 
-    // Parse JSON strings for array fields with safe parsing
-    if (updates.keyHighlights) {
+    // 🟢 Fees (IMPORTANT - nested update to prevent overwriting)
+    if (req.body.onlineFees) updates['fees.online'] = req.body.onlineFees;
+    if (req.body.offlineFees) updates['fees.offline'] = req.body.offlineFees;
+
+    // 🟢 Modes
+    if (req.body.modes) {
+      updates.modes = typeof req.body.modes === 'string' 
+        ? JSON.parse(req.body.modes) 
+        : req.body.modes;
+    }
+
+    // ==============================
+    // ✅ JSON FIELDS (SAFE PARSE)
+    // ==============================
+
+    if (req.body.keyHighlights) {
       try {
-        if (typeof updates.keyHighlights === 'string') {
-          updates.keyHighlights = JSON.parse(updates.keyHighlights);
-        }
+        updates.keyHighlights = typeof req.body.keyHighlights === 'string'
+          ? JSON.parse(req.body.keyHighlights)
+          : req.body.keyHighlights;
       } catch (err) {
         console.error('❌ keyHighlights parse error:', err);
       }
     }
-    if (updates.whyChoose) {
+
+    if (req.body.whyChoose) {
       try {
-        if (typeof updates.whyChoose === 'string') {
-          updates.whyChoose = JSON.parse(updates.whyChoose);
-        }
+        updates.whyChoose = typeof req.body.whyChoose === 'string'
+          ? JSON.parse(req.body.whyChoose)
+          : req.body.whyChoose;
       } catch (err) {
         console.error('❌ whyChoose parse error:', err);
       }
     }
-    if (updates.howItHelps) {
+
+    if (req.body.howItHelps) {
       try {
-        if (typeof updates.howItHelps === 'string') {
-          updates.howItHelps = JSON.parse(updates.howItHelps);
-        }
+        updates.howItHelps = typeof req.body.howItHelps === 'string'
+          ? JSON.parse(req.body.howItHelps)
+          : req.body.howItHelps;
       } catch (err) {
         console.error('❌ howItHelps parse error:', err);
       }
     }
-    if (updates.modes && typeof updates.modes === 'string') {
-      updates.modes = JSON.parse(updates.modes);
+
+    // 🟢 EXTRA FIELDS (dynamic category-specific data)
+    if (req.body.extraFields) {
+      try {
+        updates.extraFields = typeof req.body.extraFields === 'string'
+          ? JSON.parse(req.body.extraFields)
+          : req.body.extraFields;
+      } catch (err) {
+        console.error('❌ extraFields parse error:', err);
+      }
     }
+
+    // ==============================
+    // ✅ FILE HANDLING (ONLY IF SENT)
+    // ==============================
+
+    if (req.files) {
+      const files = req.files;
+
+      // Banner
+      if (files.banner) {
+        await deleteFromCloudinary(course.bannerImage?.public_id);
+        const result = await uploadToCloudinary(files.banner[0], 'courses/banners');
+        updates.bannerImage = {
+          url: result.url,
+          public_id: result.public_id
+        };
+      }
+
+      // Highlight
+      if (files.highlight) {
+        await deleteFromCloudinary(course.highlightImage?.public_id);
+        const result = await uploadToCloudinary(files.highlight[0], 'courses/highlights');
+        updates.highlightImage = {
+          url: result.url,
+          public_id: result.public_id
+        };
+      }
+
+      // Section
+      if (files.section) {
+        await deleteFromCloudinary(course.sectionImage?.public_id);
+        const result = await uploadToCloudinary(files.section[0], 'courses/sections');
+        updates.sectionImage = {
+          url: result.url,
+          public_id: result.public_id
+        };
+      }
+
+      // Gallery
+      if (files.gallery) {
+        // Delete old gallery images
+        if (course.galleryImages && course.galleryImages.length > 0) {
+          for (let img of course.galleryImages) {
+            await deleteFromCloudinary(img.public_id);
+          }
+        }
+        // Upload new gallery images
+        const galleryResults = [];
+        for (let file of files.gallery) {
+          const result = await uploadToCloudinary(file, 'courses/gallery');
+          galleryResults.push({
+            url: result.url,
+            public_id: result.public_id
+          });
+        }
+        updates.galleryImages = galleryResults;
+      }
+
+      // Promo Video
+      if (files.video) {
+        await deleteFromCloudinary(course.promoVideo?.public_id);
+        const result = await uploadToCloudinary(files.video[0], 'courses/videos');
+        updates.promoVideo = {
+          url: result.url,
+          public_id: result.public_id
+        };
+      }
+
+      // Brochure
+      if (files.brochure) {
+        await deleteFromCloudinary(course.brochure?.public_id);
+        const result = await uploadToCloudinary(
+          files.brochure[0],
+          'courses/brochures',
+          'raw',
+          'pdf'
+        );
+        updates.brochure = {
+          url: result.url,
+          public_id: result.public_id
+        };
+      }
+    }
+
+    // ==============================
+    // ✅ FINAL UPDATE (ONLY PROVIDED FIELDS)
+    // ==============================
 
     const updatedCourse = await Course.findByIdAndUpdate(
       req.params.id,
       { $set: updates },
       { new: true, runValidators: true }
-    ).populate('center', 'name')
-     .populate('category', 'name');
+    )
+      .populate('center', 'name')
+      .populate('category', 'name');
 
     res.json({
       success: true,
