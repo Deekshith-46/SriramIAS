@@ -5,10 +5,10 @@ const {
   updateProfile,
   changePassword
 } = require('../controllers/userController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
 // All user routes require authentication
-router.use(authMiddleware);
+router.use(protect);
 
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);

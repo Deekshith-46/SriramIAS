@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema({
     enum: ['super_admin', 'center_admin', 'employee', 'student', 'parent'],
     required: true
   },
+  center: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Center',
+    default: null
+  },
   location: {
     type: String,
     enum: ['Hyderabad', 'New Delhi', 'Pune']

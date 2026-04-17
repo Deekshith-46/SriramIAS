@@ -14,11 +14,11 @@ const {
   updateCategory,
   deleteCategory
 } = require('../controllers/adminController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 const { allowRoles, ROLES } = require('../middleware/roleMiddleware');
 
 // All admin routes require authentication
-router.use(authMiddleware);
+router.use(protect);
 
 // ==========================================
 // SUPER ADMIN ONLY ROUTES

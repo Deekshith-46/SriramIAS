@@ -12,6 +12,14 @@ const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const publicRoutes = require('./routes/publicRoutes');
+const enquiryRoutes = require('./routes/enquiryRoutes');
+const adminEnquiryRoutes = require('./routes/adminEnquiryRoutes');
+const centerEnquiryRoutes = require('./routes/centerEnquiryRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
+const filterRoutes = require('./routes/filterRoutes');
+const resourceFileRoutes = require('./routes/resourceFileRoutes');
+const mockTestRoutes = require('./routes/mockTestRoutes');
+const questionRoutes = require('./routes/questionRoutes');
 
 const app = express();
 
@@ -59,6 +67,16 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api', publicRoutes); // Public routes for centers and categories
+app.use('/api/enquiries', enquiryRoutes); // Public enquiry route
+app.use('/api/admin/enquiries', adminEnquiryRoutes); // Super Admin enquiry routes
+app.use('/api/center/enquiries', centerEnquiryRoutes); // Center Admin & Employee enquiry routes
+
+// Free Resources CMS routes
+app.use('/api/resources', resourceRoutes); // Categories & SubCategories
+app.use('/api/resources/filters', filterRoutes); // Dynamic Filters
+app.use('/api/resources/files', resourceFileRoutes); // Resources (PDFs, Study Material)
+app.use('/api/resources/mock-tests', mockTestRoutes); // Mock Tests
+app.use('/api/resources/questions', questionRoutes); // Questions
 
 // Health check endpoint
 app.get('/health', (req, res) => {
