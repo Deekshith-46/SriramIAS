@@ -20,6 +20,9 @@ const filterRoutes = require('./routes/filterRoutes');
 const resourceFileRoutes = require('./routes/resourceFileRoutes');
 const mockTestRoutes = require('./routes/mockTestRoutes');
 const questionRoutes = require('./routes/questionRoutes');
+const blogRoutes = require('./routes/blogRoutes');
+const featuredArticleRoutes = require('./routes/featuredArticleRoutes');
+const topStoryRoutes = require('./routes/topStoryRoutes');
 
 const app = express();
 
@@ -77,6 +80,15 @@ app.use('/api/resources/filters', filterRoutes); // Dynamic Filters
 app.use('/api/resources/files', resourceFileRoutes); // Resources (PDFs, Study Material)
 app.use('/api/resources/mock-tests', mockTestRoutes); // Mock Tests
 app.use('/api/resources/questions', questionRoutes); // Questions
+
+// Blog routes
+app.use('/api/blog', blogRoutes);
+
+// Featured Articles routes
+app.use('/api/featured-articles', featuredArticleRoutes);
+
+// Top Stories routes
+app.use('/api/top-stories', topStoryRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -9,7 +9,8 @@ const courseSchema = new mongoose.Schema({
   
   slug: {
     type: String,
-    sparse: true // Allows null values but ensures uniqueness when present
+    sparse: true, // Allows null values but ensures uniqueness when present
+    trim: true
   },
   
   center: {
@@ -130,6 +131,6 @@ courseSchema.pre('save', async function() {
 // Index for faster queries
 courseSchema.index({ center: 1, category: 1 });
 courseSchema.index({ isActive: 1 });
-courseSchema.index({ slug: 1 });
+courseSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Course', courseSchema);
