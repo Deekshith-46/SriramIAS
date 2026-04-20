@@ -29,6 +29,7 @@ const bookTopperRoutes = require('./routes/bookTopperRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const centerDataRoutes = require('./routes/centerDataRoutes');
 
 const app = express();
 
@@ -103,6 +104,9 @@ app.use('/api/toppers', bookTopperRoutes);      // Independent topper videos
 app.use('/api/coupons', couponRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/orders', orderRoutes);
+
+// Center Data routes
+app.use('/api/centers', centerDataRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
