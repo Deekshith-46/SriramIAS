@@ -23,6 +23,12 @@ const questionRoutes = require('./routes/questionRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const featuredArticleRoutes = require('./routes/featuredArticleRoutes');
 const topStoryRoutes = require('./routes/topStoryRoutes');
+const bookRoutes = require('./routes/bookRoutes');
+const bookOverviewRoutes = require('./routes/bookOverviewRoutes');
+const bookTopperRoutes = require('./routes/bookTopperRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
@@ -89,6 +95,14 @@ app.use('/api/featured-articles', featuredArticleRoutes);
 
 // Top Stories routes
 app.use('/api/top-stories', topStoryRoutes);
+
+// Book Commerce routes
+app.use('/api/books', bookRoutes);
+app.use('/api/overviews', bookOverviewRoutes);  // Independent overview videos
+app.use('/api/toppers', bookTopperRoutes);      // Independent topper videos
+app.use('/api/coupons', couponRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
