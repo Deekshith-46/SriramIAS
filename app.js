@@ -35,6 +35,8 @@ const testContentRoutes = require('./routes/testContentRoutes');
 const testPaperRoutes = require('./routes/testPaperRoutes');
 const testQuestionRoutes = require('./routes/testQuestionRoutes');
 const testAttemptRoutes = require('./routes/testAttemptRoutes');
+const homePageRoutes = require('./routes/homePageRoutes');
+const homeVideoRoutes = require('./routes/homeVideoRoutes');
 
 const app = express();
 
@@ -119,6 +121,12 @@ app.use('/api/test-contents', testContentRoutes);
 app.use('/api/test-papers', testPaperRoutes);
 app.use('/api/test-questions', testQuestionRoutes);
 app.use('/api/test-attempts', testAttemptRoutes);
+
+// HomePage CMS routes
+app.use('/api/homepage', homePageRoutes);
+
+// Home Video routes
+app.use('/api/home-videos', homeVideoRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
