@@ -30,6 +30,11 @@ const couponRoutes = require('./routes/couponRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const centerDataRoutes = require('./routes/centerDataRoutes');
+const testCategoryRoutes = require('./routes/testCategoryRoutes');
+const testContentRoutes = require('./routes/testContentRoutes');
+const testPaperRoutes = require('./routes/testPaperRoutes');
+const testQuestionRoutes = require('./routes/testQuestionRoutes');
+const testAttemptRoutes = require('./routes/testAttemptRoutes');
 
 const app = express();
 
@@ -107,6 +112,13 @@ app.use('/api/orders', orderRoutes);
 
 // Center Data routes
 app.use('/api/centers', centerDataRoutes);
+
+// Test & Content Management routes
+app.use('/api/test-categories', testCategoryRoutes);
+app.use('/api/test-contents', testContentRoutes);
+app.use('/api/test-papers', testPaperRoutes);
+app.use('/api/test-questions', testQuestionRoutes);
+app.use('/api/test-attempts', testAttemptRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
