@@ -277,22 +277,6 @@ exports.getCourses = async (req, res) => {
   try {
     const { center, category, isActive, isFeatured, centerName, categoryName, page = 1, limit } = req.query;
 
-    // ==============================
-    // ✅ DEFAULT FILTERS
-    // ==============================
-    let defaultCenterName = centerName;
-    let defaultCategoryName = categoryName;
-
-    // If no center specified, default to "New Delhi"
-    if (!defaultCenterName) {
-      defaultCenterName = 'New Delhi';
-    }
-
-    // If no category specified, default to "GS Foundation"
-    if (!defaultCategoryName) {
-      defaultCategoryName = 'GS Foundation';
-    }
-
     // Build filter
     const filter = {};
     
@@ -302,9 +286,9 @@ exports.getCourses = async (req, res) => {
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (isFeatured) filter.isFeatured = true;
 
-    // Name-based filters with defaults
-    if (defaultCenterName) {
-      const centers = await Center.find({ name: new RegExp(defaultCenterName, 'i') });
+    // Name-based center filter (optional)
+    if (centerName) {
+      const centers = await Center.find({ name: new RegExp(centerName, 'i') });
       if (centers.length > 0) {
         filter.center = { $in: centers.map(c => c._id) };
       } else {
@@ -313,13 +297,14 @@ exports.getCourses = async (req, res) => {
           success: true,
           count: 0,
           courses: [],
-          message: `No courses found for center: ${defaultCenterName}`
+          message: `No courses found for center: ${centerName}`
         });
       }
     }
 
-    if (defaultCategoryName && defaultCategoryName !== 'All') {
-      const categories = await Category.find({ name: new RegExp(defaultCategoryName, 'i') });
+    // Name-based category filter (optional)
+    if (categoryName && categoryName !== 'All') {
+      const categories = await Category.find({ name: new RegExp(categoryName, 'i') });
       if (categories.length > 0) {
         filter.category = { $in: categories.map(c => c._id) };
       } else {
@@ -328,11 +313,11 @@ exports.getCourses = async (req, res) => {
           success: true,
           count: 0,
           courses: [],
-          message: `No courses found for category: ${defaultCategoryName}`
+          message: `No courses found for category: ${categoryName}`
         });
       }
     }
-    // If categoryName is "All", skip category filter
+    // If categoryName is "All" or not provided, skip category filter
 
     // Get total count first
     const total = await Course.countDocuments(filter);
