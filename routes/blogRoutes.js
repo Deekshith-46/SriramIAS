@@ -1,78 +1,99 @@
 const express = require('express');
 const router = express.Router();
-const {
-  createCategory,
-  getCategories,
-  getCategoryById,
-  updateCategory,
-  deleteCategory
-} = require('../controllers/blogCategoryController');
-const {
-  createArticle,
-  getArticles,
-  getRecentArticles,
-  getArticleById,
-  updateArticle,
-  deleteArticle
-} = require('../controllers/articleController');
+const multer = require('multer');
 const { protect, authorize } = require('../middleware/authMiddleware');
-const blogUpload = require('../middleware/blogUpload');
+const {
+  createBlog,
+  getBlogs,
+  getBlogById,
+  updateBlog,
+  deleteBlog,
+  getFiltersByLanguage,
+  getFiltersByPaper
+} = require('../controllers/blogController');
 
-// ==========================================
-// CATEGORY ROUTES
-// ==========================================
+const {
+  createLanguage,
+  getLanguages,
+  updateLanguage,
+  deleteLanguage
+} = require('../controllers/languageController');
 
-// Get all categories (Public)
-router.get('/categories', getCategories);
+const {
+  createPaper,
+  getPapers,
+  updatePaper,
+  deletePaper
+} = require('../controllers/paperController');
 
-// Get single category (Public)
-router.get('/categories/:id', getCategoryById);
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
-// Create category (Super Admin & Center Admin only)
-router.post('/categories', protect, authorize('super_admin', 'admin'), createCategory);
+// ==============================
+// LANGUAGE ROUTES
+// ==============================
+router.route('/languages')
+  .get(getLanguages)
+  .post(protect, authorize('super_admin'), createLanguage);
 
-// Update category (Super Admin & Center Admin only)
-router.put('/categories/:id', protect, authorize('super_admin', 'admin'), updateCategory);
+router.route('/languages/:id')
+  .put(protect, authorize('super_admin'), updateLanguage)
+  .delete(protect, authorize('super_admin'), deleteLanguage);
 
-// Delete category - Soft delete (Super Admin & Center Admin only)
-router.delete('/categories/:id', protect, authorize('super_admin', 'admin'), deleteCategory);
+// ==============================
+// PAPER ROUTES
+// ==============================
+router.route('/papers')
+  .get(getPapers)
+  .post(protect, authorize('super_admin'), createPaper);
 
-// ==========================================
-// ARTICLE ROUTES
-// ==========================================
+router.route('/papers/:id')
+  .put(protect, authorize('super_admin'), updatePaper)
+  .delete(protect, authorize('super_admin'), deletePaper);
 
-// Get recent 6 articles (Public) - Must be before /:id route
-router.get('/articles/recent', getRecentArticles);
+// ==============================
+// BLOG ROUTES
+// ==============================
 
-// Get all articles with filters & pagination (Public)
-router.get('/articles', getArticles);
+// Public routes
+router.get('/blogs', getBlogs);
+router.get('/blogs/filters/language', getFiltersByLanguage);
+router.get('/blogs/filters/paper', getFiltersByPaper);
+router.get('/blogs/:id', getBlogById);
 
-// Get single article by ID or slug (Public)
-router.get('/articles/:id', getArticleById);
-
-// Create article (Super Admin & Center Admin only) - Form Data with file uploads
-router.post('/articles', 
-  protect, 
-  authorize('super_admin', 'admin'), 
-  blogUpload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'images', maxCount: 5 }
+// Protected routes (Admin only)
+router.post(
+  '/blogs',
+  protect,
+  authorize('super_admin'),
+  upload.fields([
+    { name: 'thumbnail' },
+    { name: 'images', maxCount: 20 }
   ]),
-  createArticle
+  createBlog
 );
 
-// Update article (Super Admin & Center Admin only) - Form Data with file uploads
-router.put('/articles/:id', 
-  protect, 
-  authorize('super_admin', 'admin'), 
-  blogUpload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'images', maxCount: 5 }
+router.put(
+  '/blogs/:id',
+  protect,
+  authorize('super_admin'),
+  upload.fields([
+    { name: 'thumbnail' },
+    { name: 'images', maxCount: 20 }
   ]),
-  updateArticle
+  updateBlog
 );
 
-// Delete article - Soft delete (Super Admin & Center Admin only)
-router.delete('/articles/:id', protect, authorize('super_admin', 'admin'), deleteArticle);
+router.delete(
+  '/blogs/:id',
+  protect,
+  authorize('super_admin'),
+  deleteBlog
+);
 
 module.exports = router;
