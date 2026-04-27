@@ -667,3 +667,61 @@ exports.deleteCourse = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all courses grouped by centers and categories
+// @route   GET /api/courses/grouped
+// @access  Public
+exports.getCoursesGrouped = async (req, res) => {
+  try {
+    // Get all active courses with populated center and category
+    const courses = await Course.find({ isActive: true })
+      .populate('center', 'name')
+      .populate('category', 'name')
+      .sort({ createdAt: -1 });
+
+    // Group courses by center -> category
+    const groupedData = {};
+
+    courses.forEach(course => {
+      const centerName = course.center?.name || 'Unknown';
+      const categoryName = course.category?.name || 'Unknown';
+
+      // Initialize center if not exists
+      if (!groupedData[centerName]) {
+        groupedData[centerName] = {};
+      }
+
+      // Initialize category if not exists
+      if (!groupedData[centerName][categoryName]) {
+        groupedData[centerName][categoryName] = [];
+      }
+
+      // Add course title to category array
+      groupedData[centerName][categoryName].push({
+        _id: course._id,
+        title: course.title,
+        slug: course.slug
+      });
+    });
+
+    // Convert to array format
+    const result = Object.keys(groupedData).map(centerName => ({
+      [centerName]: Object.keys(groupedData[centerName]).map(categoryName => ({
+        [categoryName]: groupedData[centerName][categoryName]
+      }))
+    }));
+
+    res.json({
+      success: true,
+      count: courses.length,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Get Grouped Courses Error:', error);
+    res.status(500).json({ 
+      message: 'Error fetching grouped courses', 
+      error: error.message 
+    });
+  }
+};

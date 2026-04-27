@@ -9,13 +9,15 @@ const {
   getCourseById,
   getCourseBySlug,
   updateCourse,
-  deleteCourse
+  deleteCourse,
+  getCoursesGrouped
 } = require('../controllers/courseController');
 
 // ==========================================
 // PUBLIC ROUTES (No authentication needed)
 // ==========================================
 router.get('/', getCourses);
+router.get('/grouped', getCoursesGrouped);
 router.get('/:id', getCourseById);
 router.get('/slug/:slug', getCourseBySlug);
 

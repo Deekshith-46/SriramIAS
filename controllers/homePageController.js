@@ -1,4 +1,8 @@
 const HomePage = require('../models/HomePage');
+const HomeVideo = require('../models/HomeVideo');
+const HomeSection4 = require('../models/HomeSection4');
+const Course = require('../models/Course');
+const Book = require('../models/Book');
 const cloudinary = require('../config/cloudinary');
 
 // Helper function to upload image to Cloudinary
@@ -256,9 +260,91 @@ exports.getHomePage = async (req, res) => {
       });
     }
 
+    // Get videos from HomeVideo collection
+    const videos = await HomeVideo.find().sort({ createdAt: -1 });
+
+    // Get section4 cards from HomeSection4 collection
+    const section4Cards = await HomeSection4.find({ isActive: true })
+      .sort({ order: 1, createdAt: -1 });
+
+    // Get courses grouped by category
+    const courses = await Course.find({ isActive: true })
+      .populate('category', 'name')
+      .sort({ createdAt: -1 });
+
+    // Group courses by category
+    const groupedCourses = {};
+
+    courses.forEach(course => {
+      const categoryName = course.category?.name || 'Uncategorized';
+
+      if (!groupedCourses[categoryName]) {
+        groupedCourses[categoryName] = [];
+      }
+
+      groupedCourses[categoryName].push({
+        _id: course._id,
+        title: course.title,
+        bannerImage: course.bannerImage?.url || null
+      });
+    });
+
+    // Convert to frontend format
+    const courseSection = {
+      title: 'EXPLORE OUR COURSES',
+      categories: Object.keys(groupedCourses).map(category => ({
+        name: category,
+        courses: groupedCourses[category]
+      }))
+    };
+
+    // Get books for homepage
+    const books = await Book.find({ isActive: true })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    // Format books with required fields
+    const formattedBooks = books.map(book => ({
+      _id: book._id,
+      image: book.image?.url || null,
+      title: book.title,
+      discountedPrice: book.discountedPrice,
+      summary: book.summary?.substring(0, 100) || ''
+    }));
+
+    // Books section for homepage
+    const bookSection = {
+      title: 'BUY OUR BOOKS',
+      books: formattedBooks
+    };
+
+    // Convert to plain object and add section4 and section7
+    const homeData = home.toObject();
+    
+    // Add section4 with cards
+    homeData.section4 = {
+      title: homeData.section4?.title || 'ACCESS FREE LEARNING COURSES',
+      cards: section4Cards
+    };
+
+    // Add section7 with videos
+    homeData.section7 = {
+      videos: videos.map(video => ({
+        _id: video._id,
+        videoUrl: video.videoUrl,
+        videoThumbnail: video.videoThumbnail
+      }))
+    };
+
+    // Add sectionCourses with grouped courses by category
+    homeData.sectionCourses = courseSection;
+
+    // Add sectionBooks with formatted books
+    homeData.sectionBooks = bookSection;
+
     res.json({
       success: true,
-      data: home
+      data: homeData
     });
   } catch (err) {
     console.error('Get HomePage Error:', err);
