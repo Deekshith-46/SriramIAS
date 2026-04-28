@@ -9,7 +9,8 @@ const {
   updateBlog,
   deleteBlog,
   getFiltersByLanguage,
-  getFiltersByPaper
+  getFiltersByPaper,
+  getBlogFilterOptions
 } = require('../controllers/blogController');
 
 const {
@@ -62,6 +63,7 @@ router.route('/papers/:id')
 
 // Public routes
 router.get('/blogs', getBlogs);
+router.get('/blogs/filter-options', getBlogFilterOptions);
 router.get('/blogs/filters/language', getFiltersByLanguage);
 router.get('/blogs/filters/paper', getFiltersByPaper);
 router.get('/blogs/:id', getBlogById);

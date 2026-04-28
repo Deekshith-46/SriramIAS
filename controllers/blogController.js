@@ -170,14 +170,24 @@ exports.createBlog = async (req, res) => {
 // @access  Public
 exports.getBlogs = async (req, res) => {
   try {
-    const { languageId, paperId, year, month, limit } = req.query;
+    const { languageId, paperId, year, month, date, limit } = req.query;
 
     const filter = { isActive: true };
 
     if (languageId) filter.languageId = languageId;
     if (paperId) filter.paperId = paperId;
-    if (year) filter.year = parseInt(year);
-    if (month) filter.month = parseInt(month);
+    
+    // If complete date is provided, use it directly (year, month auto-extracted)
+    if (date) {
+      const selectedDate = new Date(date);
+      const start = new Date(selectedDate.setHours(0, 0, 0, 0));
+      const end = new Date(selectedDate.setHours(23, 59, 59, 999));
+      filter.date = { $gte: start, $lte: end };
+    } else {
+      // Fallback to year/month filtering if date not provided
+      if (year) filter.year = parseInt(year);
+      if (month) filter.month = parseInt(month);
+    }
 
     // Default limit if not provided
     const blogLimit = parseInt(limit) || 10;
@@ -462,25 +472,21 @@ exports.getFiltersByLanguage = async (req, res) => {
       isActive: true, 
       languageId: new mongoose.Types.ObjectId(languageId) 
     })
-      .populate('languageId', 'name code')
-      .populate('paperId', 'name')
+      .select('thumbnail title date')
       .sort({ createdAt: -1 });
 
-    // Get contents for each blog
-    const blogsWithContents = await Promise.all(
-      blogs.map(async (blog) => {
-        const contents = await BlogContent.find({ blogId: blog._id }).sort({ order: 1 });
-        return {
-          ...blog._doc,
-          contents
-        };
-      })
-    );
+    // Format response
+    const formattedBlogs = blogs.map(blog => ({
+      _id: blog._id,
+      thumbnail: blog.thumbnail?.url || null,
+      title: blog.title,
+      date: blog.date
+    }));
 
     res.json({
       success: true,
-      count: blogsWithContents.length,
-      data: blogsWithContents
+      count: formattedBlogs.length,
+      data: formattedBlogs
     });
 
   } catch (err) {
@@ -511,25 +517,21 @@ exports.getFiltersByPaper = async (req, res) => {
       isActive: true, 
       paperId: new mongoose.Types.ObjectId(paperId) 
     })
-      .populate('languageId', 'name code')
-      .populate('paperId', 'name')
+      .select('thumbnail title date')
       .sort({ createdAt: -1 });
 
-    // Get contents for each blog
-    const blogsWithContents = await Promise.all(
-      blogs.map(async (blog) => {
-        const contents = await BlogContent.find({ blogId: blog._id }).sort({ order: 1 });
-        return {
-          ...blog._doc,
-          contents
-        };
-      })
-    );
+    // Format response
+    const formattedBlogs = blogs.map(blog => ({
+      _id: blog._id,
+      thumbnail: blog.thumbnail?.url || null,
+      title: blog.title,
+      date: blog.date
+    }));
 
     res.json({
       success: true,
-      count: blogsWithContents.length,
-      data: blogsWithContents
+      count: formattedBlogs.length,
+      data: formattedBlogs
     });
 
   } catch (err) {
@@ -537,6 +539,49 @@ exports.getFiltersByPaper = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching blogs',
+      error: err.message
+    });
+  }
+};
+
+// @desc    Get blog filter options (years, months, dates)
+// @route   GET /api/blogs/filter-options
+// @access  Public
+exports.getBlogFilterOptions = async (req, res) => {
+  try {
+    const data = await Blog.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          years: { $addToSet: "$year" },
+          months: { $addToSet: "$month" },
+          dates: { $addToSet: "$date" }
+        }
+      }
+    ]);
+
+    const result = data[0] || { years: [], months: [], dates: [] };
+
+    res.json({
+      success: true,
+      years: result.years.sort((a, b) => b - a),
+      months: result.months.sort((a, b) => b - a),
+      dates: result.dates.sort((a, b) => new Date(b) - new Date(a)).map(d => ({
+        value: d,
+        label: new Date(d).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        })
+      }))
+    });
+
+  } catch (err) {
+    console.error('Get Filter Options Error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching filter options',
       error: err.message
     });
   }

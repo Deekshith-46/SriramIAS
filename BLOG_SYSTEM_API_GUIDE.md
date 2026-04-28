@@ -651,24 +651,73 @@ images = [New Files] (optional - replaces all old images)
 
 ---
 
-### Get Filters (Years & Months)
-**GET** `/api/blogs/filters`
+### Get Blogs Filtered by Language (Lightweight)
+**GET** `/api/blogs/filters/language?languageId=LANG_ID`
 
 **Access:** Public
+
+**Description:** Returns a lightweight list of blogs filtered by language. Only returns essential fields for listing/grid views.
+
+**Query Parameters:**
+```
+?languageId=69e8...
+```
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "years": [2026, 2025, 2024],
-  "months": [
-    { "number": 1, "name": "January" },
-    { "number": 2, "name": "February" },
-    { "number": 3, "name": "March" },
-    { "number": 4, "name": "April" }
+  "count": 5,
+  "data": [
+    {
+      "_id": "blog_id_here",
+      "thumbnail": "https://res.cloudinary.com/...jpg",
+      "title": "Blog Title Here",
+      "date": "2024-01-15T00:00:00.000Z"
+    },
+    {
+      "_id": "blog_id_here_2",
+      "thumbnail": "https://res.cloudinary.com/...jpg",
+      "title": "Another Blog Title",
+      "date": "2024-01-10T00:00:00.000Z"
+    }
   ]
 }
 ```
+
+**Note:** This endpoint only returns `thumbnail`, `title`, and `date` for optimized performance. Use `GET /api/blogs/:id` to get full blog details with content sections.
+
+---
+
+### Get Blogs Filtered by Paper (Lightweight)
+**GET** `/api/blogs/filters/paper?paperId=PAPER_ID`
+
+**Access:** Public
+
+**Description:** Returns a lightweight list of blogs filtered by paper. Only returns essential fields for listing/grid views.
+
+**Query Parameters:**
+```
+?paperId=69e8...
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "_id": "blog_id_here",
+      "thumbnail": "https://res.cloudinary.com/...jpg",
+      "title": "GS I Blog Title",
+      "date": "2024-02-20T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Note:** This endpoint only returns `thumbnail`, `title`, and `date` for optimized performance. Use `GET /api/blogs/:id` to get full blog details with content sections.
 
 ---
 
@@ -713,10 +762,17 @@ GET /api/blogs?languageId=[English ID]&limit=4
 GET /api/blogs/[BLOG_ID]
 ```
 
-### Step 6: Get Filters
+### Step 6: Get Blogs by Language Filter
 ```
-GET /api/blogs/filters
+GET /api/blogs/filters/language?languageId=[English ID]
 ```
+**Returns:** Lightweight list (thumbnail, title, date)
+
+### Step 7: Get Blogs by Paper Filter
+```
+GET /api/blogs/filters/paper?paperId=[GS I ID]
+```
+**Returns:** Lightweight list (thumbnail, title, date)
 
 ---
 
@@ -973,6 +1029,19 @@ views: { type: Number, default: 0 }
 // Increment on each blog view
 ```
 
+### ✅ Bonus 3: Lightweight Filter Endpoints (Performance Optimized)
+```javascript
+// Language Filter - Only returns thumbnail, title, date
+GET /api/blogs/filters/language?languageId=xxx
+
+// Paper Filter - Only returns thumbnail, title, date  
+GET /api/blogs/filters/paper?paperId=xxx
+
+// Uses .select() to fetch only required fields
+// No populate, no content sections
+// Perfect for listing/grid views
+```
+
 ---
 
 ## 🚀 Quick Reference
@@ -988,7 +1057,8 @@ views: { type: Number, default: 0 }
 | Get Blog Detail | GET | `/api/blogs/:id` | Public |
 | Update Blog | PUT | `/api/blogs/:id` | Super Admin |
 | Delete Blog | DELETE | `/api/blogs/:id` | Super Admin |
-| Get Filters | GET | `/api/blogs/filters` | Public |
+| Get Blogs by Language | GET | `/api/blogs/filters/language?languageId=xxx` | Public |
+| Get Blogs by Paper | GET | `/api/blogs/filters/paper?paperId=xxx` | Public |
 
 ---
 
@@ -999,6 +1069,9 @@ views: { type: Number, default: 0 }
 - **Blogs** → Main content with thumbnail and images
 - **BlogContent** → Section-wise table of contents
 - **Filters** → Year and month filtering
+- **Language Filter API** → Lightweight endpoint (thumbnail, title, date)
+- **Paper Filter API** → Lightweight endpoint (thumbnail, title, date)
 - **Cloudinary** → Auto image uploads
+- **Performance** → Optimized filter endpoints with field projection
 
 **Ready to use!** 🚀

@@ -56,6 +56,7 @@ const blogSchema = new mongoose.Schema({
 // Indexes for faster queries
 blogSchema.index({ languageId: 1, paperId: 1 });
 blogSchema.index({ year: 1, month: 1 });
+blogSchema.index({ year: 1, month: 1, date: 1 });
 blogSchema.index({ isActive: 1 });
 blogSchema.index({ slug: 1 });
 
